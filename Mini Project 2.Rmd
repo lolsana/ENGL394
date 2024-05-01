@@ -1,0 +1,139 @@
+---
+title: "Mini Project 2"
+author: "Sana Choudhry"
+date: "2024-04-16"
+output: html_document
+---
+## Introduction  
+We want to analyze, is the number of days physical health was not good greater in males compred to females? This question aims to evaluate if there is a statistically significant difference in self-reported poor physical health days between male and female respondents in the Behavioral Risk Factor Surveillance System (BRFSS). Understanding differences in physical health across genders is crucial for multiple reasons. Firstly, it can help public health professionals identify gender-specific health issues and barriers to health that may not be apparent without such targeted analysis. Secondly, it can guide the allocation of resources that will be more tailored and therefore potentially more effective in addressing the specific needs of different demographic groups.
+The primary stakeholders in this research include:  
+
+* Public Health Authorities
+* Healthcare Providers
+* Policy Makers
+* Researchers
+* General Public  
+
+The results of this analysis could significantly impact patient care in hospitals, clinics, and other health institutions by informing gender-sensitive health practices and interventions. If, for example, a significant difference in physical health days is found between genders, healthcare institutions might consider implementing gender-specific health screenings or preventive health programs.  
+Institutions could also use this information to train healthcare providers on gender difference in health perceptions and management. This could lead to improved patient outcomes, higher patient satisfaction, and more effective management of public health resources.  
+Overall, by tailoring health interventions to meet the specific needs of different demographic groups, health systems can improve the efficacy of their programs and the health of the communities they serve. 
+
+## Data Cleaning & Exploratory Data Analysis  
+The analysis utilizes data from the Behavior Risk Factor Surveillance System (BRFSS), which is a comprehensive telephone survey conducted by the Centers for Disease Control and Prevention (CDC). The BRFSS gathers state-level data about U.S. residents regarding their health-related risk behaviors, chronic health conditions, an use of medical services. BRFSS data is collected annually, and the methods and strategies for handling the data are consistent across different years.  
+1. The variable 'PHYSHLTH', which measures the "Number of Days Physical Health Was Not Good", initially included specific numeric codes for non-numeric responses (88 for "None", 77 for "Don't know/Not sure", and 99 for "Refused"). These were recorded to NA (missing values) to ensure that the variable only contained numeric data relevant to the analysis.  
+2. The recoding of this variable was verified by comparing the frequency of these specific responses before and after the recoding process. This check confirmed that values meant to be recoded were successfully transformed into 'NA'.  
+3. The original 'SEX' variable, coded as 1 for males and 2 for females, was recoded into a new variable 'SEX2' with more descriptive labels: "Male" and "Female". This recoding enhances the readability of the analyses that involve gender.  
+4. The successful creation of SEX2 was verified through a frequency table that matches 'SEX' codes with 'SEX2' labels, ensuring the accuracy of this recoding.  
+The dataset consisted of 3260 observations and 397 variables. The average number of days where respondents reported their physical health as not good was approximately 15.05 days. Additionally, approximately 69.45% of the participants were female, and 30.55% were male, reflecting the gender distribution within the survey population. 
+```{r echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+# Check if required packages are not already installed 
+packages <- c("MASS", "tidyverse")
+
+new_packages <- packages[!packages %in% installed.packages()]
+if (length(new_packages) > 0) {
+  install.packages(new_packages)
+}
+
+# import packages
+library(ggplot2)
+library(tidyverse)
+library(MASS)
+library(dplyr)
+
+#import the BRFSS.csv file
+brfss <- read.csv("BRFSS.csv")
+
+#Find the number of observations
+num_obs <- nrow(brfss)
+num_obs
+
+#Find the number of variables
+num_var <- length(brfss)
+num_var
+
+#Recode all values of the "Number of Days Physical Health Not Good" variable that
+#indicate None, Don't Know/Not Sure, or Refused, to NA
+brfss <- brfss %>%
+  mutate(PHYSHLTH = recode(as.numeric(PHYSHLTH),
+                                 '88' = NA_real_,
+                                 "77" = NA_real_,
+                                 "99" = NA_real_,
+                                  .default = as.numeric(PHYSHLTH)))
+#Include a check that shows the recode of the "Number of Days Physical Health Not Good" variable was successful
+table(brfss$PHYSHLTH, useNA="ifany")
+
+#Create a new variable, SEX2, that recodes the SEX variable to "Male" & "Female" accordingly (refer to the data dictionary for this)
+brfss <- brfss %>%
+  mutate(SEX2 = case_when(
+    SEX == 1 ~ "Male",
+    SEX == 2 ~ "Female",
+    TRUE ~ NA_character_
+  ))
+
+#Include a check that shows the creation of SEX2 based on the values of SEX was successful. Your check should include a comparison of both variables side by side (i.e. this should NOT be two separate frequencies)
+comparison_table <- brfss %>%
+  group_by(SEX, SEX2) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  spread(key = SEX2, value = Count)
+
+print(comparison_table)
+
+#Find the mean of the "Number of Days Physical Health Not Good" variable after the recode above
+mean_PHYSHLTH <- mean(brfss$PHYSHLTH, na.rm=TRUE)
+print(mean_PHYSHLTH)
+
+#Find the percentages of males and females in the data
+sex_distribution <- brfss %>%
+  group_by(SEX2) %>%
+  summarise(Count=n(), .groups='drop')
+
+sex_distribution <- sex_distribution %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+print(sex_distribution)
+```
+## Data Visualization 
+The histogram illustrates the distribution of the "Number of Days Physical Health Not Good" variable. The shape of the histogram is distinctly right-skewed, meaning that most of the data points fall on the left side of the histogram. with a long tail extending to the right. This skewness indicates that a larger number of respondents reported fewer days where their physical health was not good, with diminishing frequencies as the number of days increases. However, there's a spike at the far right end of the histogram, which likely represents respondents reporting the maximum number of unhealthy days.  
+The boxplot graph presents a comparison of the five-number summary for the number of unhealthy physical health days between male and female respondents. Boxplots for both groups depict the median (central line), the interquartile range (represented by the box), and the range (represented by whiskers). The median number of unhealthy days for females is approximately 12, while the median number for males is around 14. This suggests a difference in central tendency between the two groups. 
+```{r echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+#Create a histogram that shows the overall distribution of the "Number of Days Physical Health Not Good" variable
+ggplot(data = brfss, aes(x=PHYSHLTH)) +
+  geom_histogram(binwidth=1, color="black", fill = "blue") +
+  labs(title = "Distribution of 'Number of Days Physical Health Not Good'",
+       x = "Number of Days",
+       y = "Frequency") +
+  theme_minimal()
+
+#Create a graph/plot that shows the difference in the five-number summary of the "Number of Days Physical Health Not Good" variable, by the SEX2 variable (NOTE: there is a right and wrong answer for this. Please refer to lecture examples to determine which graph/plot is appropriate for this)
+ggplot(data = brfss, aes(x=SEX2, y=PHYSHLTH, fill=SEX2)) +
+  geom_boxplot() +
+  labs(title = "Five-Number Summary of Physical Health Not Good Days by Sex",
+       x="Sex",
+       y="Number of Days of Physical Health Not Good") +
+  scale_fill_manual(values=c("Male"="blue", "Female"="pink")) +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+```
+
+## Hypothesis Test
+In the analysis of the PHYSHLTH varibale from the BRFSS data, we are focused on comparing the means between two independent groups -- males and females. Our hypotheses are structured around whether there is a difference in the number of self-reported unhealthy days between these two groups.
+
+The null hypothesis is that there is no difference in the mean number of days of poor physical health between males and females.
+
+The alternative hypothesis suggests that there is a difference, specifically that males report a greater number of days where their physical health is not good compared to females.
+
+We conducted an upper-tailed t-test. The p-value is 0.8804, and given the alpha level of 0.05, we fail to reject the null hypothesis. We conclude that we do not have enough evidence to claim a statistically significant difference in the mean number of unhealthy days based on sex. 
+```{r echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+#Conduct a hypothesis test based on the research question detailed in the introduction (the research question provides a hint to the type of test needed here! It is up to you to determine the correct test.)
+t_test_result <- t.test(PHYSHLTH ~ SEX2, data=brfss, alternative = "greater")
+print(t_test_result)
+```
+
+## Conclusion
+Our hypothesis testing, conducted at a 0.05 significance level, sought to ascertain whether a difference exists in the mean number of days individuals report poor physical health. Our null hypothesis stated no difference between genders, while our alternative hypothesis stated that males report more unhealthy days than females. A p-value of 0.884 brings us to the conclusion that we fail to reject the null hypothesis, maintaining our stance that no statistically significant difference exists between genders in this regard.  
+
+For health practitioners, this conclusion suggests that gender-specific interventions may not need to differentiate between males and females regarding the number of days with poor physical health as reported by participants. While this definitely does not negate the possibility of gender-specific health issues, it implies that the metric of "unhealthy days" does not show a significant difference between genders in the sampled population.  
+
+As a researcher who came into this with a preconceived notion that gender is a determinant in health quality, these results served as a reminder that individual health experiences are not solely defined by gender. 
+
+Future research should consist of examining the impact of different variables, such as age, employment, or socio-economic status.
